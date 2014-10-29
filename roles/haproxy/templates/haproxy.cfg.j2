@@ -1,0 +1,66 @@
+#---------------------------------------------------------------------
+# global settings
+#---------------------------------------------------------------------
+global
+    daemon
+    log              127.0.0.1 local2
+    chroot           /var/lib/haproxy
+    pidfile          /var/run/haproxy.pid
+    maxconn          4000
+    user             haproxy
+    group            haproxy
+    tune.bufsize     16384
+    tune.maxrewrite  1024
+    tune.ssl.default-dh-param  1024
+    spread-checks    5
+
+
+#---------------------------------------------------------------------
+# common defaults that all the 'listen' and 'backend' sections will
+# use if not designated in their block
+#---------------------------------------------------------------------
+defaults
+    mode                    http
+    log                     global
+    option                  dontlognull
+    option                  http-server-close
+    option                  redispatch
+    option                  httplog
+    option                  forwardfor except 127.0.0.0/8
+    retries                 3
+    timeout http-request    10s
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 10s
+    timeout check           10s
+    maxconn                 4000
+
+
+#---------------------------------------------------------------------
+# www backend
+#---------------------------------------------------------------------
+backend be_www
+    balance     roundrobin
+
+	# XXX: here should be something like:
+	#
+    # {% for host in groups['webservers'] -%}
+    # server  www_{{ "%02d" | format(loop.index) }} {{ host }}:5000 check
+    # {% endfor %}
+	# 
+	# Flaskr listens only on localhost:5000 and changing that requires
+	# touching its source code. So the following line is only a poor man's
+	# remedy for that and it assumes that flaskr runs on the same machine as
+	# haproxy:
+    server  www_01 localhost:5000 check
+
+
+#---------------------------------------------------------------------
+# http frontend
+#---------------------------------------------------------------------
+frontend  fe_http
+    bind :80
+
+    default_backend be_www

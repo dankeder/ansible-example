@@ -1,0 +1,6 @@
+---
+- name: restart flaskr
+  service: name=flaskr state=restarted
+
+- name: reload systemd
+  command: systemctl daemon-reload

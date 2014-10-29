@@ -1,0 +1,27 @@
+---
+- name: install haproxy
+  yum: name="haproxy" state="present"
+
+- name: generate haproxy.cfg
+  template: src="haproxy.cfg.j2" dest="/etc/haproxy/haproxy.cfg" owner="root" group="root" mode="644"
+  notify:
+    - restart haproxy
+
+# XXX: Set haproxy into selinux permissive mode because of the following bug:
+# https://bugzilla.redhat.com/show_bug.cgi?id=1131188
+- name: install policycoreutils-python
+  yum: name="policycoreutils-python" state="present"
+
+- name: set haproxy into selinux permissive mode
+  shell: semanage permissive -l | grep -q 'haproxy_t' && echo -n 'no change' || semanage permissive -a 'haproxy_t'
+  register: result
+  changed_when: result.stdout != 'no change'
+# END
+
+- name: allow http on firewall
+  firewalld: zone="public" service="http" permanent="true" state="enabled"
+  notify:
+    - restart firewalld
+
+- name: start haproxy
+  service: name="haproxy" enabled="yes" state="started"

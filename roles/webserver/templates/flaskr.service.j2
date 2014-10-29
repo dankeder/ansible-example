@@ -1,0 +1,13 @@
+[Unit]
+Description=Flaskr - a minimal blog application
+
+[Service]
+Type=simple
+Environment="FLASKR_SETTINGS={{ flaskr_home }}/flaskr.cfg"
+ExecStart=/usr/bin/python {{ flaskr_home }}/flaskr.py
+User={{ flaskr_user }}
+Group={{ flaskr_group }}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

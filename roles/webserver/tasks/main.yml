@@ -1,0 +1,33 @@
+---
+- name: create user
+  user: name="{{ flaskr_user }}" shell="/sbin/nologin" state="present"
+
+- name: install python-flask
+  yum: name="python-flask" state="present"
+
+- name: install rsync
+  yum: name="rsync" state="present"
+
+- name: copy flaskr
+  synchronize: src="{{ flaskr_dir }}/" dest="{{ flaskr_home }}/" recursive="yes" delete="yes" rsync_opts="--exclude *.swp, --exclude *.swo" owner="no" group="no"
+  notify:
+    - restart flaskr
+
+# XXX: "--chown=flaskr:flaskr" in rsync above would be better, but it's supported only since rsync-3.1.0
+- name: fix perms
+  command: /bin/chown -cR "{{ flaskr_user }}:{{ flaskr_group }}" "{{ flaskr_home }}"
+  register: chown_result
+  changed_when: "chown_result.stdout != ''"
+
+- name: generate flaskr.cfg
+  template: src="flaskr.cfg.j2" dest="{{ flaskr_home}}/flaskr.cfg" owner="flaskr" group="flaskr" mode="644"
+  notify:
+    - restart flaskr
+
+- name: generate flaskr.service
+  template: src="flaskr.service.j2" dest="/etc/systemd/system/flaskr.service" owner="root" group="root" mode="644"
+  notify:
+    - reload systemd
+
+- name: start flaskr
+  service: name="flaskr" state="started"
